@@ -6,7 +6,7 @@
 class CLFileOperator
 {
     public:
-        CLStatus Open();
+        CLStatus Open(const char *pstrFileName);
         CLStatus Read();
         CLStatus Write(const char *pstrMsg);
         CLStatus Close();
@@ -14,9 +14,9 @@ class CLFileOperator
 
         CLStatus Flush();
 
-        CLFileOperator* GetInstance();
-
-        CLFileOperator(const char *pstrFileName);
+        static CLFileOperator* GetInstance();
+        
+        CLFileOperator();
         ~CLFileOperator();
 
     private:

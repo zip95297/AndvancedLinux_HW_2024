@@ -10,24 +10,31 @@
 #define MAX_SIZE 265
 #define BUFFER_SIZE 4096
 
-using namespace std;
-
-CLFileOperator::CLFileOperator(const char *pstrFileName)
+CLFileOperator::CLFileOperator()
 {
-    m_pFileName = new char[strlen(pstrFileName) + 1];
-    strcpy(m_pFileName, pstrFileName);
-
     m_ReadBuffer = new char[BUFFER_SIZE];
     m_nUsedBytesForReadBuffer = 0;
     m_WriteBuffer = new char[BUFFER_SIZE];
     m_nUsedBytesForWriteBuffer = 0;
+    m_pFileName = nullptr;
 
     m_bFlagForProcessExit = false;
+
     return;
 };
 
-CLStatus CLFileOperator::Open()
+CLStatus CLFileOperator::Open(const char *pstrFileName)
 {
+    if(m_pFileName)
+    {
+        printf("Error: FileOperator is occupied. Please close the File already opened.\n");
+        //printf("File: %s\n", m_pFileName);
+        return CLStatus(-1, 0);
+    }
+
+    m_pFileName = new char[strlen(pstrFileName) + 1];
+    strcpy(m_pFileName, pstrFileName);
+
     m_Fd = open(m_pFileName, O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
 
     if(m_Fd == -1)
@@ -38,6 +45,8 @@ CLStatus CLFileOperator::Open()
 
 CLStatus CLFileOperator::Close()
 {
+    m_pFileName = nullptr;
+
     if(m_Fd == -1)
         return CLStatus(-1, 0);
 
@@ -205,3 +214,34 @@ CLFileOperator::~CLFileOperator()
     if(m_WriteBuffer != 0)
         delete[] m_WriteBuffer;
 }
+
+CLFileOperator* CLFileOperator::GetInstance()
+{
+  	if(m_pFileOperator == nullptr)
+	{
+		m_pFileOperator = new CLFileOperator;
+
+		if(atexit(CLFileOperator::OnProcessExit) != 0)
+		{
+			if(m_pFileOperator != 0)
+			{
+				m_pFileOperator->m_bFlagForProcessExit = true;
+				printf("In CLFileOperator::GetInstance(), atexit binding error\n");
+			}
+		}
+	}
+
+	return m_pFileOperator;
+}
+
+void CLFileOperator::OnProcessExit()
+{
+    CLFileOperator *pFileOperator = CLFileOperator::GetInstance();
+    if(pFileOperator != nullptr)
+    {
+        pFileOperator->Flush();
+        pFileOperator->m_bFlagForProcessExit = true;
+    }
+}
+
+CLFileOperator* CLFileOperator::m_pFileOperator = nullptr;
